@@ -18,14 +18,19 @@ app.use(cookieParser());
 
 mongoose.set("strictQuery", true);
 mongoose
-  .connect(process.env.DATABASE, {  })
+  .connect(process.env.DATABASE, {})
   .then(() => console.log("DB connected"))
   .catch((err) => console.log("DB Error => ", err));
 
 
+import proxyRoutes from "./controllers/resumeProxy.js";
+
+// ... existing code ...
+
 app.use("/api", apiRoutes);
 app.use("/api", authRoutes);
-app.get("/", (req, res) => {res.json("Backend index");});
+app.use("/api", proxyRoutes);
+app.get("/", (req, res) => { res.json("Backend index"); });
 
 const port = process.env.PORT || 8000;
-app.listen(port, () => {console.log(`Server is running on port ${port}`);});
+app.listen(port, () => { console.log(`Server is running on port ${port}`); });
