@@ -5,6 +5,7 @@ import Education from "../models/education.js";
 import Experience from "../models/experience.js";
 import Project from "../models/projects.js";
 import Skills from "../models/skills.js";
+import Social from "../models/social.js";
 import { requireSignin } from "../controllers/auth.js";
 
 const router = express.Router();
@@ -18,6 +19,7 @@ const getModel = (section) => {
     case 'experience': return Experience;
     case 'projects': return Project;
     case 'skills': return Skills;
+    case 'social': return Social;
     default: return null;
   }
 };
@@ -27,32 +29,21 @@ router.get("/user/data", requireSignin, async (req, res) => {
   try {
     const userId = req.auth._id; // detailed in requireSignin
 
-    const [profile, certifications, education, experience, projects, skills] = await Promise.all([
+    const [profile, certifications, education, experience, projects, skills, socials] = await Promise.all([
       Profile.findOne({ userId }),
       Certification.find({ userId }),
       Education.find({ userId }),
       Experience.find({ userId }),
       Project.find({ userId }),
-      Skills.find({ userId }) // Skills model might store an array of strings in one doc or multiple docs?
+      Skills.find({ userId }),
+      Social.find({ userId })
     ]);
-
-    // Check Skills model structure. Usually strictly modeled.
-    // Assuming Skills.find returns the list of skills or a document containing them.
-    // Based on previous file content: Skills.create({ skills }) -> it wraps them.
-    // If Skills stores { skills: [] }, then we need to extract it. 
-    // Let's assume for now we send back what we find, frontend handles it.
-    // Actually, looking at previous code: const { skills } = req.body; Skills.create({ skills });
-    // So it's likely a single document with a 'skills' array field.
 
     let skillsData = [];
     if (skills && skills.length > 0) {
-      // If it returns an array of docs, and each doc has 'skills' array?
-      // Or is it one doc per user?
-      // Safe bet: if it's one doc
       if (skills[0].skills) {
         skillsData = skills[0].skills;
       } else {
-        // Maybe it's just the doc itself?
         skillsData = skills;
       }
     }
@@ -63,7 +54,8 @@ router.get("/user/data", requireSignin, async (req, res) => {
       education: education || [],
       experience: experience || [],
       projects: projects || [],
-      skills: skillsData || []
+      skills: skillsData || [],
+      social: socials || []
     });
 
   } catch (error) {
@@ -90,9 +82,6 @@ router.post("/user/update", requireSignin, async (req, res) => {
 
     // Special handling for Skills (Single Document wrapping array)
     if (section === 'skills') {
-      // Expecting data to be an array of skills or similar. 
-      // Previous code: Skills.create({ skills: req.body.skills })
-      // So we should update the single document.
       const updated = await Skills.findOneAndUpdate(
         { userId },
         { skills: data, userId },
@@ -101,14 +90,13 @@ router.post("/user/update", requireSignin, async (req, res) => {
       return res.json(updated.skills);
     }
 
-    // For other sections (Arrays of Documents: Education, Experience, etc.)
+    // For other sections (Arrays of Documents: Education, Experience, Projects, Social, Certs)
     const Model = getModel(section);
     if (!Model) {
       return res.status(400).json({ error: "Invalid section" });
     }
 
     // Replace strategy: Delete all for user and insert new list
-    // This allows reordering and deletion easily from frontend
     await Model.deleteMany({ userId });
 
     if (Array.isArray(data) && data.length > 0) {

@@ -1,13 +1,13 @@
 import mongoose from "mongoose";
 
 const ProfileSchema = new mongoose.Schema(
-    
+
   {
     userId: { type: mongoose.Schema.Types.ObjectId, ref: "User", required: true },
     name: {
       type: String,
-      required: true,
       trim: true,
+      default: "",
     },
     title: {
       type: String,
@@ -16,10 +16,9 @@ const ProfileSchema = new mongoose.Schema(
     },
     email: {
       type: String,
-      required: true,
-      unique: true,
       lowercase: true,
       trim: true,
+      default: "",
     },
     about: {
       type: String,
