@@ -2,7 +2,7 @@
   "name": "backend",
   "version": "1.0.0",
   "main": "index.js",
-  "type":"module",
+  "type": "module",
   "scripts": {
     "start": "nodemon index.js",
     "test": "echo \"Error: no test specified\" && exit 1"
@@ -19,10 +19,16 @@
     "dotenv": "^17.2.3",
     "express": "^5.1.0",
     "express-jwt": "^8.5.1",
+    "express-session": "^1.19.0",
+    "google-auth-library": "^10.5.0",
     "jsonwebtoken": "^9.0.2",
     "lodash": "^4.17.21",
     "mongoose": "^9.0.0",
     "morgan": "^1.10.1",
-    "nodemon": "^3.1.11"
+    "nodemon": "^3.1.11",
+    "openai": "^6.16.0",
+    "passport": "^0.7.0",
+    "passport-google-oauth20": "^2.0.0",
+    "twilio": "^5.11.2"
   }
 }

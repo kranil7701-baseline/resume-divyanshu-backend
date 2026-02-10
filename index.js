@@ -22,7 +22,6 @@ mongoose
   .then(() => console.log("DB connected"))
   .catch((err) => console.log("DB Error => ", err));
 
-
 import proxyRoutes from "./controllers/resumeProxy.js";
 
 // ... existing code ...

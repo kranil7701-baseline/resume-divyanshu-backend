@@ -1,8 +1,11 @@
 import User from "../models/user.js"
 import jwt from "jsonwebtoken"
 import _ from "lodash"
+import { OAuth2Client } from "google-auth-library"
 import { expressjwt } from "express-jwt"
 import "dotenv/config.js";
+
+const client = new OAuth2Client(process.env.GOOGLE_CLIENT_ID);
 
 
 export const signup = async (req, res) => {
@@ -70,3 +73,40 @@ export const requireSignin = expressjwt({
     algorithms: ["HS256"],
     userProperty: "auth",
 });
+
+
+export const googleLogin = (req, res) => {
+    const { idToken } = req.body;
+    client.verifyIdToken({ idToken, audience: process.env.GOOGLE_CLIENT_ID }).then(response => {
+        const { email_verified, name, email, jti } = response.payload;
+        if (email_verified) {
+            User.findOne({ email }).exec().then((user) => {
+                if (user) {
+                    const token = jwt.sign({ _id: user._id }, process.env.JWT_SECRET, { expiresIn: '7d' });
+                    res.cookie('token', token, { expiresIn: '7d' });
+                    const { _id, email, name, role, username } = user;
+                    return res.json({ token, user: { _id, email, name, role, username } });
+                } else {
+                    let username = _.snakeCase(name) + "_" + Math.random().toString(36).substring(2, 5);
+                    let profile = `${process.env.CLIENT_URL}/profile/${username}`;
+                    let password = jti + process.env.JWT_SECRET;
+                    user = new User({ name, email, username, profile, password });
+                    user.save().then((data) => {
+                        const token = jwt.sign({ _id: data._id }, process.env.JWT_SECRET, { expiresIn: '7d' });
+                        res.cookie('token', token, { expiresIn: '7d' });
+                        const { _id, email, name, role, username } = data;
+                        return res.json({ token, user: { _id, email, name, role, username } });
+                    }).catch(err => {
+                        return res.status(400).json({
+                            error: err.message
+                        });
+                    });
+                }
+            });
+        } else {
+            return res.status(400).json({
+                error: 'Google login failed. Try again.'
+            });
+        }
+    });
+};
