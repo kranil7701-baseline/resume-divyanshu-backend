@@ -6,6 +6,7 @@ import Experience from "../models/experience.js";
 import Project from "../models/projects.js";
 import Skills from "../models/skills.js";
 import Social from "../models/social.js";
+import ProjectExperience from "../models/projectExperience.js";
 import { requireSignin } from "../controllers/auth.js";
 
 const router = express.Router();
@@ -18,6 +19,7 @@ const getModel = (section) => {
     case 'education': return Education;
     case 'experience': return Experience;
     case 'projects': return Project;
+    case 'projectExperience': return ProjectExperience;
     case 'skills': return Skills;
     case 'social': return Social;
     default: return null;
@@ -29,23 +31,20 @@ router.get("/user/data", requireSignin, async (req, res) => {
   try {
     const userId = req.auth._id; // detailed in requireSignin
 
-    const [profile, certifications, education, experience, projects, skills, socials] = await Promise.all([
+    const [profile, certifications, education, experience, projects, projectExperience, skills, socials] = await Promise.all([
       Profile.findOne({ userId }),
       Certification.find({ userId }),
       Education.find({ userId }),
       Experience.find({ userId }),
       Project.find({ userId }),
-      Skills.find({ userId }),
+      ProjectExperience.find({ userId }),
+      Skills.findOne({ userId }),
       Social.find({ userId })
     ]);
 
     let skillsData = [];
-    if (skills && skills.length > 0) {
-      if (skills[0].skills) {
-        skillsData = skills[0].skills;
-      } else {
-        skillsData = skills;
-      }
+    if (skills && skills.skills) {
+      skillsData = skills.skills;
     }
 
     res.json({
@@ -54,6 +53,7 @@ router.get("/user/data", requireSignin, async (req, res) => {
       education: education || [],
       experience: experience || [],
       projects: projects || [],
+      projectExperience: projectExperience || [],
       skills: skillsData || [],
       social: socials || []
     });

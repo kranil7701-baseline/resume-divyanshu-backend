@@ -21,6 +21,10 @@ const EducationSchema = new mongoose.Schema(
       type: Date,
       required: false,
     },
+    grade: {
+      type: String,
+      trim: true,
+    },
   },
   { timestamps: true }
 );
