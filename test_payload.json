@@ -1,0 +1,12 @@
+{
+    "content": {
+        "name": "Test",
+        "email": "test@example.com",
+        "skills": [
+            {
+                "name": "React",
+                "proficiency": "Expert"
+            }
+        ]
+    }
+}
