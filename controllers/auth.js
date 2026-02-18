@@ -3,6 +3,7 @@ import jwt from "jsonwebtoken"
 import _ from "lodash"
 import { OAuth2Client } from "google-auth-library"
 import { expressjwt } from "express-jwt"
+import { sendWelcomeEmail } from "../helpers/email.js";
 import "dotenv/config.js";
 
 const client = new OAuth2Client(process.env.GOOGLE_CLIENT_ID);
@@ -31,6 +32,9 @@ export const signup = async (req, res) => {
 
         const newUser = new User({ name, username, email, password, profile });
         await newUser.save();
+
+        // Send Welcome Email
+        sendWelcomeEmail(email, name);
 
         res.json({
             message: 'Signup success! Please signin.'
@@ -92,6 +96,9 @@ export const googleLogin = (req, res) => {
                     let password = jti + process.env.JWT_SECRET;
                     user = new User({ name, email, username, profile, password });
                     user.save().then((data) => {
+                        // Send Welcome Email
+                        sendWelcomeEmail(data.email, data.name);
+
                         const token = jwt.sign({ _id: data._id }, process.env.JWT_SECRET, { expiresIn: '7d' });
                         res.cookie('token', token, { expiresIn: '7d' });
                         const { _id, email, name, role, username } = data;
