@@ -39,7 +39,23 @@ const userSchema = new mongoose.Schema(
             sparse: true
         },
         resetPasswordLink: {
-            data: String,
+            type: String,
+            default: ''
+        },
+        subscription: {
+            status: {
+                type: String,
+                enum: ['none', 'active', 'past_due', 'canceled', 'unpaid'],
+                default: 'none'
+            },
+            plan: {
+                type: String,
+                enum: ['free', 'monthly', 'yearly'],
+                default: 'free'
+            },
+            stripeCustomerId: String,
+            stripeSubscriptionId: String,
+            currentPeriodEnd: Date
         }
     },
     {

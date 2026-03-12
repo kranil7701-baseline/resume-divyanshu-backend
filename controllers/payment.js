@@ -276,3 +276,14 @@ export const cancelSubscription = async (req, res) => {
         res.status(500).json({ error: 'Failed to cancel subscription' });
     }
 };
+
+export const getSubscription = async (req, res) => {
+    try {
+        const userId = req.auth._id;
+        const user = await User.findById(userId).select('subscription');
+        res.json(user.subscription || { status: 'none', plan: 'free' });
+    } catch (err) {
+        console.error('GET_SUBSCRIPTION_ERROR', err);
+        res.status(500).json({ error: 'Could not fetch subscription' });
+    }
+};

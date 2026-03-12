@@ -9,12 +9,22 @@ import cors from "cors";
 import mongoose from "mongoose";
 import apiRoutes from "./routes/resume.js";
 import authRoutes from "./routes/auth.js";
+import paymentRoutes from "./routes/payment.js";
+import generatedResumeRoutes from "./routes/generatedResumes.js";
+import portfolioRoutes from "./routes/portfolio.js";
+import { createClient } from "redis";
 
 const app = express();
-app.use(cors());
 app.use(morgan("dev"));
-app.use(bodyParser.json());
 app.use(cookieParser());
+app.use(cors());
+
+// Stripe Webhook needs raw body - must be before body-parser
+import { stripeWebhook } from "./controllers/payment.js";
+app.post("/api/payment/stripe/webhook", express.raw({ type: "application/json" }), stripeWebhook);
+
+app.use(bodyParser.json({ limit: "10mb" }));
+app.use(bodyParser.urlencoded({ limit: "10mb", extended: true }));
 
 mongoose.set("strictQuery", true);
 mongoose
@@ -28,8 +38,46 @@ import proxyRoutes from "./controllers/resumeProxy.js";
 
 app.use("/api", apiRoutes);
 app.use("/api", authRoutes);
+app.use("/api/payment", paymentRoutes);
+app.use("/api", generatedResumeRoutes);
+app.use("/api", portfolioRoutes);
 app.use("/api", proxyRoutes);
 app.get("/", (req, res) => { res.json("Backend index"); });
+
+
+
+
+
+
+// const redisClient = createClient({
+//   username: "default",
+//   password: "YOUR_PASSWORD",
+//   socket: {
+//     host: "redis-14080.c11.us-east-1-2.ec2.cloud.redislabs.com",
+//     port: 14080
+//   }
+// });
+
+
+const redisClient = createClient({
+  url: "redis://default:iw1CyWWrjv8CNShs5kP4TdO4rYg7KFNC@redis-14080.c11.us-east-1-2.ec2.cloud.redislabs.com:14080",
+  socket: {
+    tls: false
+  }
+});
+
+redisClient.on("error", (err) => console.log("Redis Error", err));
+
+async function connectRedis() {
+  await redisClient.connect();
+  console.log("Connected to Redis Cloud");
+}
+
+connectRedis();
+
+
+
+
 
 const port = process.env.PORT || 8000;
 app.listen(port, () => { console.log(`Server is running on port ${port}`); });

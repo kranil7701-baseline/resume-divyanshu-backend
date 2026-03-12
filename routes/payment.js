@@ -1,16 +1,26 @@
-import express from "express";
+import express from 'express';
+import {
+    createCheckoutSession,
+    createRazorpayOrder,
+    verifyRazorpayPayment,
+    getUserTransactions,
+    cancelSubscription,
+    getSubscription
+} from '../controllers/payment.js';
+import { requireSignin } from '../controllers/auth.js';
+
 const router = express.Router();
-import { createCheckoutSession, stripeWebhook, createRazorpayOrder, verifyRazorpayPayment, getUserTransactions, cancelSubscription } from "../controllers/payment.js";
-import { requireSignin } from "../controllers/auth.js";
-import express_pkg from 'express';
 
-router.post('/create-checkout-session', requireSignin, createCheckoutSession);
-router.post('/create-razorpay-order', requireSignin, createRazorpayOrder);
-router.post('/verify-razorpay-payment', requireSignin, verifyRazorpayPayment);
-router.get('/history', requireSignin, getUserTransactions);
-router.post('/cancel', requireSignin, cancelSubscription);
+// Stripe Routes
+router.post('/stripe/create-checkout-session', requireSignin, createCheckoutSession);
 
-// Webhook raw body is handled in index.js
-router.post('/webhook', stripeWebhook);
+// Razorpay Routes
+router.post('/razorpay/order', requireSignin, createRazorpayOrder);
+router.post('/razorpay/verify', requireSignin, verifyRazorpayPayment);
+
+// Common Routes
+router.get('/subscription', requireSignin, getSubscription);
+router.get('/transactions', requireSignin, getUserTransactions);
+router.post('/cancel-subscription', requireSignin, cancelSubscription);
 
 export default router;

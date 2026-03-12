@@ -3,7 +3,7 @@ import jwt from "jsonwebtoken"
 import _ from "lodash"
 import { OAuth2Client } from "google-auth-library"
 import { expressjwt } from "express-jwt"
-import { sendWelcomeEmail } from "../helpers/email.js";
+import { sendWelcomeEmail, sendPasswordResetEmail } from "../helpers/email.js";
 import "dotenv/config.js";
 
 const client = new OAuth2Client(process.env.GOOGLE_CLIENT_ID);
@@ -116,4 +116,75 @@ export const googleLogin = (req, res) => {
             });
         }
     });
+};
+
+export const forgotPassword = async (req, res) => {
+    const { email } = req.body;
+
+    try {
+        const user = await User.findOne({ email });
+        if (!user) {
+            return res.status(400).json({ error: 'User with that email does not exist' });
+        }
+
+        const token = jwt.sign({ _id: user._id, name: user.name }, process.env.JWT_SECRET, { expiresIn: '20m' });
+
+        return user.updateOne({ resetPasswordLink: token }).then((success) => {
+            if (success) {
+                const resetLink = `${process.env.CLIENT_URL}/auth/password/reset/${token}`;
+                sendPasswordResetEmail(email, user.name, resetLink);
+                return res.json({ message: `Email has been sent to ${email}. Follow the instructions to activate your account` });
+            } else {
+                return res.status(400).json({ error: 'Database connection error on user password forgot request' });
+            }
+        });
+
+    } catch (err) {
+        return res.status(400).json({ error: 'Something went wrong. Try again.' });
+
+    }
+};
+
+export const resetPassword = async (req, res) => {
+    const { resetPasswordLink, newPassword } = req.body;
+
+    if (resetPasswordLink) {
+        jwt.verify(resetPasswordLink, process.env.JWT_SECRET, function (err, decoded) {
+            if (err) {
+                return res.status(400).json({
+                    error: 'Expired link. Try again'
+                });
+            }
+
+            User.findOne({ resetPasswordLink }).then((user) => {
+                if (err || !user) {
+                    return res.status(400).json({
+                        error: 'Something went wrong. Try later'
+                    });
+                }
+
+                const updatedFields = {
+                    password: newPassword,
+                    resetPasswordLink: ''
+                };
+
+                user = _.extend(user, updatedFields);
+
+                user.save().then((data) => {
+                    if (err) {
+                        return res.status(400).json({
+                            error: 'Error resetting user password'
+                        });
+                    }
+                    res.json({
+                        message: `Great! Now you can login with your new password`
+                    });
+                }).catch(err => {
+                    return res.status(400).json({
+                        error: err.message
+                    });
+                });
+            });
+        });
+    }
 };

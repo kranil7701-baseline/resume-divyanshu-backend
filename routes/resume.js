@@ -8,6 +8,8 @@ import Skills from "../models/skills.js";
 import Social from "../models/social.js";
 import ProjectExperience from "../models/projectExperience.js";
 import { requireSignin } from "../controllers/auth.js";
+import { getATSScore, generateInterviewQuestions } from "../controllers/ai.js";
+
 
 const router = express.Router();
 
@@ -113,4 +115,9 @@ router.post("/user/update", requireSignin, async (req, res) => {
   }
 });
 
+// AI Routes
+router.post("/ats-score", requireSignin, getATSScore);
+router.post("/interview-prep", requireSignin, generateInterviewQuestions);
+
 export default router;
+
