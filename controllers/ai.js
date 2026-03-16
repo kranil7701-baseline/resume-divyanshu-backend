@@ -1,4 +1,7 @@
-import pdf from "pdf-parse";
+import { createRequire } from 'module';
+const require = createRequire(import.meta.url);
+const pdf = require('pdf-parse');
+
 import { GoogleGenerativeAI } from "@google/generative-ai";
 import mammoth from "mammoth";
 import Profile from "../models/Profile.js";
