@@ -8,7 +8,10 @@ import Skills from "../models/skills.js";
 import Social from "../models/social.js";
 import ProjectExperience from "../models/projectExperience.js";
 import { requireSignin } from "../controllers/auth.js";
-import { getATSScore, generateInterviewQuestions } from "../controllers/ai.js";
+import { getATSScore, generateInterviewQuestions, extractResumeData } from "../controllers/ai.js";
+import multer from "multer";
+
+const upload = multer({ storage: multer.memoryStorage() });
 
 
 const router = express.Router();
@@ -118,6 +121,7 @@ router.post("/user/update", requireSignin, async (req, res) => {
 // AI Routes
 router.post("/ats-score", requireSignin, getATSScore);
 router.post("/interview-prep", requireSignin, generateInterviewQuestions);
+router.post("/extract-resume", requireSignin, upload.single("resume"), extractResumeData);
 
 export default router;
 

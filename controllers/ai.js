@@ -1,4 +1,6 @@
+import { PDFParse } from "pdf-parse";
 import { GoogleGenerativeAI } from "@google/generative-ai";
+import mammoth from "mammoth";
 import Profile from "../models/Profile.js";
 import Certification from "../models/certifications.js";
 import Education from "../models/education.js";
@@ -150,5 +152,73 @@ export const generateInterviewQuestions = async (req, res) => {
     } catch (error) {
         console.error("Interview Questions Error:", error);
         res.status(500).json({ error: "Failed to generate interview questions" });
+    }
+};
+
+export const extractResumeData = async (req, res) => {
+    try {
+        if (!req.file) {
+            return res.status(400).json({ error: "No file uploaded" });
+        }
+
+        let resumeText = "";
+        const buffer = req.file.buffer;
+
+        if (req.file.mimetype === "application/pdf") {
+            const parser = new PDFParse({ data: buffer });
+            const data = await parser.getText();
+            resumeText = data.text;
+            await parser.destroy();
+        } else if (req.file.mimetype === "application/vnd.openxmlformats-officedocument.wordprocessingml.document") {
+            const data = await mammoth.extractRawText({ buffer });
+            resumeText = data.value;
+        } else {
+            return res.status(400).json({ error: "Unsupported file type. Please upload PDF or DOCX." });
+        }
+
+        if (!resumeText.trim()) {
+            return res.status(400).json({ error: "Could not extract text from the file." });
+        }
+
+        const model = genAI.getGenerativeModel({ model: "gemini-2.0-flash-lite" });
+
+        const prompt = `
+            You are an expert resume parser. Extract information from the following resume text and format it into structured JSON.
+            
+            RESUME TEXT:
+            ${resumeText}
+
+            Provide a response in strict JSON format with the following fields:
+            {
+                "experience": [
+                    {"role": "string", "company": "string", "start": "ISO Date or null", "end": "ISO Date or null", "details": "string"}
+                ],
+                "education": [
+                    {"school": "string", "degree": "string", "start": "ISO Date or null", "end": "ISO Date or null", "grade": "string"}
+                ],
+                "projects": [
+                    {"title": "string", "link": "string or null", "desc": "string"}
+                ]
+            }
+            
+            Guidelines:
+            - "details" in experience should be a summary or bullet points of responsibilities.
+            - Dates should be in YYYY-MM-DD format if possible, or null.
+            - Only return the JSON. No other text.
+        `;
+
+        const result = await model.generateContent(prompt);
+        const response = await result.response;
+        let text = response.text();
+
+        // Clean up markdown code blocks if present
+        text = text.replace(/```json|```/g, "").trim();
+
+        const extractedData = JSON.parse(text);
+        res.json(extractedData);
+
+    } catch (error) {
+        console.error("Resume Extraction Error:", error);
+        res.status(500).json({ error: "Failed to extract resume data" });
     }
 };

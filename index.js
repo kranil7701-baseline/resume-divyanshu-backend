@@ -59,21 +59,21 @@ app.get("/", (req, res) => { res.json("Backend index"); });
 // });
 
 
-const redisClient = createClient({
-  url: "redis://default:iw1CyWWrjv8CNShs5kP4TdO4rYg7KFNC@redis-14080.c11.us-east-1-2.ec2.cloud.redislabs.com:14080",
-  socket: {
-    tls: false
-  }
-});
+// const redisClient = createClient({
+//   url: "redis://default:iw1CyWWrjv8CNShs5kP4TdO4rYg7KFNC@redis-14080.c11.us-east-1-2.ec2.cloud.redislabs.com:14080",
+//   socket: {
+//     tls: false
+//   }
+// });
 
-redisClient.on("error", (err) => console.log("Redis Error", err));
+// redisClient.on("error", (err) => console.log("Redis Error", err));
 
-async function connectRedis() {
-  await redisClient.connect();
-  console.log("Connected to Redis Cloud");
-}
+// async function connectRedis() {
+//   await redisClient.connect();
+//   console.log("Connected to Redis Cloud");
+// }
 
-connectRedis();
+// connectRedis();
 
 
 
