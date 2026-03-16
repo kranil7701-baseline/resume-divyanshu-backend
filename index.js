@@ -25,7 +25,7 @@ const allowedOrigins = [
   'http://localhost:3000',
   'http://localhost:5173',
   'https://resume-divyanshu-frontend.vercel.app',
-  'https://resume-divyanshu-backend.vercel.app/'
+  'https://resume-divyanshu-backend.vercel.app'
 ];
 
 app.use(cors({
@@ -41,8 +41,6 @@ app.use(cors({
   allowedHeaders: 'Content-Type,Authorization,X-Requested-With,Accept,Origin',
   optionsSuccessStatus: 204
 }));
-
-app.options('*', cors());
 
 // 2. Middleware
 app.use(morgan("dev"));
