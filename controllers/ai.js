@@ -1,4 +1,4 @@
-import { PDFParse } from "pdf-parse";
+import pdf from "pdf-parse";
 import { GoogleGenerativeAI } from "@google/generative-ai";
 import mammoth from "mammoth";
 import Profile from "../models/Profile.js";
@@ -165,10 +165,8 @@ export const extractResumeData = async (req, res) => {
         const buffer = req.file.buffer;
 
         if (req.file.mimetype === "application/pdf") {
-            const parser = new PDFParse({ data: buffer });
-            const data = await parser.getText();
+            const data = await pdf(buffer);
             resumeText = data.text;
-            await parser.destroy();
         } else if (req.file.mimetype === "application/vnd.openxmlformats-officedocument.wordprocessingml.document") {
             const data = await mammoth.extractRawText({ buffer });
             resumeText = data.value;
