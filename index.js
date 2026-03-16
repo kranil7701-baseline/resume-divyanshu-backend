@@ -12,12 +12,27 @@ import authRoutes from "./routes/auth.js";
 import paymentRoutes from "./routes/payment.js";
 import generatedResumeRoutes from "./routes/generatedResumes.js";
 import portfolioRoutes from "./routes/portfolio.js";
+import jobRoutes from "./routes/jobs.js";
 import { createClient } from "redis";
 
 const app = express();
 app.use(morgan("dev"));
 app.use(cookieParser());
-app.use(cors());
+const allowedOrigins = [
+  'http://localhost:3000',
+  'http://localhost:5173',
+  'https://resume-divyanshu-frontend.vercel.app'
+];
+
+app.use(cors({
+  origin: function (origin, callback) {
+    if (!origin || allowedOrigins.includes(origin)) {
+      callback(null, true);
+    } else {
+      callback(new Error('Not allowed by CORS'));
+    }
+  }
+}));
 
 // Stripe Webhook needs raw body - must be before body-parser
 import { stripeWebhook } from "./controllers/payment.js";
@@ -42,6 +57,7 @@ app.use("/api/payment", paymentRoutes);
 app.use("/api", generatedResumeRoutes);
 app.use("/api", portfolioRoutes);
 app.use("/api", proxyRoutes);
+app.use("/api", jobRoutes);
 app.get("/", (req, res) => { res.json("Backend index"); });
 
 
