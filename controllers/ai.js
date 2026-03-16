@@ -1,5 +1,17 @@
 import { createRequire } from 'module';
 const require = createRequire(import.meta.url);
+
+// Polyfills for Vercel/Serverless environment
+if (typeof global.DOMMatrix === 'undefined') {
+    global.DOMMatrix = class DOMMatrix {};
+}
+if (typeof global.ImageData === 'undefined') {
+    global.ImageData = class ImageData {};
+}
+if (typeof global.Path2D === 'undefined') {
+    global.Path2D = class Path2D {};
+}
+
 const pdf = require('pdf-parse');
 
 import { GoogleGenerativeAI } from "@google/generative-ai";
