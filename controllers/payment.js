@@ -38,7 +38,19 @@ export const createCheckoutSession = async (req, res) => {
 
         // Create or get Stripe customer
         let stripeCustomerId = user.subscription?.stripeCustomerId;
-        if (!stripeCustomerId) {
+        
+        let customerExists = false;
+        if (stripeCustomerId) {
+            try {
+                await stripe.customers.retrieve(stripeCustomerId);
+                customerExists = true;
+            } catch (err) {
+                console.log(`⚠️ Customer ${stripeCustomerId} not found in current Stripe environment. Creating new one.`);
+                customerExists = false;
+            }
+        }
+
+        if (!stripeCustomerId || !customerExists) {
             const customer = await stripe.customers.create({
                 email: user.email,
                 name: user.name,
@@ -48,7 +60,7 @@ export const createCheckoutSession = async (req, res) => {
             });
             stripeCustomerId = customer.id;
 
-            // Save customer ID to user
+            // Save new customer ID to user
             await User.findByIdAndUpdate(userId, {
                 'subscription.stripeCustomerId': stripeCustomerId
             });
@@ -80,8 +92,29 @@ export const createCheckoutSession = async (req, res) => {
 };
 
 export const stripeWebhook = async (req, res) => {
-    if (!stripe) return res.status(500).json({ error: 'Stripe is not configured' });
+    // 1. Log the arrival of the event
+    console.log("-----------------------------------------");
+    console.log("🔔 Stripe Webhook Received!");
+    
+    if (!stripe) {
+        console.error("❌ Stripe is not initialized!");
+        return res.status(500).json({ error: 'Stripe is not configured' });
+    }
+    
+    // Convert Buffer to String for human-readable logging
+    const rawBody = req.body instanceof Buffer ? req.body.toString() : JSON.stringify(req.body);
+    console.log("📦 Raw Body Content Snippet:", rawBody.substring(0, 100) + "...");
     const sig = req.headers['stripe-signature'];
+    
+    if (!sig) {
+        console.error("❌ MISSING STRIPE SIGNATURE HEADER!");
+        return res.status(400).send("No signature found");
+    }
+
+    if (!(req.body instanceof Buffer)) {
+        console.warn("⚠️ WARNING: req.body is NOT a Buffer. It might have been already parsed as JSON, which will break signature verification.");
+    }
+
     let event;
 
     try {
@@ -90,8 +123,10 @@ export const stripeWebhook = async (req, res) => {
             sig,
             process.env.STRIPE_WEBHOOK_SECRET
         );
+        console.log("✅ Webhook Verified. Event Type:", event.type);
     } catch (err) {
-        console.error('WEBHOOK_ERROR', err.message);
+        console.error('❌ WEBHOOK VERIFICATION FAILED:', err.message);
+        console.log("💡 Tip: Checking secret:", process.env.STRIPE_WEBHOOK_SECRET?.substring(0, 10) + "...");
         return res.status(400).send(`Webhook Error: ${err.message}`);
     }
 
@@ -109,6 +144,13 @@ export const stripeWebhook = async (req, res) => {
             const subscriptionDeleted = event.data.object;
             await handleSubscriptionDeleted(subscriptionDeleted);
             break;
+        case 'invoice.payment_succeeded':
+            const invoice = event.data.object;
+            if (invoice.subscription) {
+                const sub = await stripe.subscriptions.retrieve(invoice.subscription);
+                await handleSubscriptionUpdated(sub);
+            }
+            break;
         default:
             console.log(`Unhandled event type ${event.type}`);
     }
@@ -122,15 +164,31 @@ async function handleSubscriptionCreated(session) {
     const stripeSubscriptionId = session.subscription;
     const stripeCustomerId = session.customer;
 
-    const subscription = await stripe.subscriptions.retrieve(stripeSubscriptionId);
+    if (!userId) {
+        console.warn("⚠️ No userId found in session metadata. Cannot update database.");
+        return;
+    }
+
+    let currentPeriodEnd = null;
+    if (stripeSubscriptionId) {
+        try {
+            const subscription = await stripe.subscriptions.retrieve(stripeSubscriptionId);
+            currentPeriodEnd = subscription.current_period_end ? new Date(subscription.current_period_end * 1000) : null;
+        } catch (err) {
+            console.error("❌ Failed to retrieve subscription details:", err.message);
+        }
+    }
+
+    // Ensure planId matches the Mongoose enum ('free', 'monthly', 'yearly')
+    const validPlan = ['monthly', 'yearly'].includes(planId) ? planId : 'monthly';
 
     await User.findByIdAndUpdate(userId, {
         subscription: {
             status: 'active',
-            plan: planId,
+            plan: validPlan,
             stripeCustomerId,
             stripeSubscriptionId,
-            currentPeriodEnd: new Date(subscription.current_period_end * 1000)
+            currentPeriodEnd: currentPeriodEnd || new Date(Date.now() + 30 * 24 * 60 * 60 * 1000) // Fallback to 30 days if null
         }
     });
 
@@ -149,13 +207,19 @@ async function handleSubscriptionCreated(session) {
 async function handleSubscriptionUpdated(subscription) {
     const stripeSubscriptionId = subscription.id;
     const status = subscription.status; // active, past_due, etc.
+    const currentPeriodEnd = subscription.current_period_end ? new Date(subscription.current_period_end * 1000) : null;
+
+    const updateData = {
+        'subscription.status': status === 'active' ? 'active' : 'past_due'
+    };
+    
+    if (currentPeriodEnd) {
+        updateData['subscription.currentPeriodEnd'] = currentPeriodEnd;
+    }
 
     await User.findOneAndUpdate(
         { 'subscription.stripeSubscriptionId': stripeSubscriptionId },
-        {
-            'subscription.status': status === 'active' ? 'active' : 'past_due',
-            'subscription.currentPeriodEnd': new Date(subscription.current_period_end * 1000)
-        }
+        updateData
     );
 }
 
