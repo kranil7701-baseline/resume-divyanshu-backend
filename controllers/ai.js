@@ -85,7 +85,7 @@ export const getATSScore = async (req, res) => {
         }
 
         const resumeText = await getUserResumeText(userId);
-        const model = genAI.getGenerativeModel({ model: "gemini-2.0-flash-lite" });
+        const model = genAI.getGenerativeModel({ model: "gemini-3-flash-preview" });
 
         const prompt = `
             You are an expert ATS (Applicant Tracking System) analyzer. 
@@ -134,7 +134,7 @@ export const generateInterviewQuestions = async (req, res) => {
         }
 
         const resumeText = await getUserResumeText(userId);
-        const model = genAI.getGenerativeModel({ model: "gemini-2.0-flash-lite" });
+        const model = genAI.getGenerativeModel({ model: "gemini-3-flash-preview" });
 
 
         const prompt = `
@@ -193,7 +193,7 @@ export const extractResumeData = async (req, res) => {
             return res.status(400).json({ error: "Could not extract text from the file." });
         }
 
-        const model = genAI.getGenerativeModel({ model: "gemini-2.0-flash-lite" });
+        const model = genAI.getGenerativeModel({ model: "gemini-3-flash-preview" });
 
         const prompt = `
             You are an expert resume parser. Extract information from the following resume text and format it into structured JSON.

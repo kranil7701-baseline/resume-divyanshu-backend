@@ -86,7 +86,7 @@ router.patch("/jobs/:id/status", requireSignin, async (req, res) => {
     const jobId = req.params.id;
     const { status } = req.body;
 
-    const validStatuses = ["applied", "interviewing", "offered", "accepted", "rejected", "withdrawn"];
+    const validStatuses = ["applied", "interviewing", "interview_passed", "offered", "accepted", "rejected", "withdrawn"];
     if (!validStatuses.includes(status)) {
       return res.status(400).json({ error: "Invalid status" });
     }
